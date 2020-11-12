@@ -485,6 +485,7 @@ cfg_if::cfg_if! {
         any(unix, windows),
         not(target_vendor = "uwp"),
         not(target_os = "emscripten"),
+        not(target_os = "none"),
     ))] {
         mod gimli;
         use gimli as imp;
