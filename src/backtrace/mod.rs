@@ -138,6 +138,7 @@ cfg_if::cfg_if! {
                 unix,
                 not(target_os = "emscripten"),
                 not(all(target_os = "ios", target_arch = "arm")),
+                not(target_os = "none")
             ),
             all(
                 target_env = "sgx",
@@ -154,6 +155,10 @@ cfg_if::cfg_if! {
         pub(crate) use self::dbghelp::Frame as FrameImp;
         #[cfg(target_env = "msvc")] // only used in dbghelp symbolize
         pub(crate) use self::dbghelp::StackFrame;
+    } else if #[cfg(all(target_os = "none", target_vendor = "espressif"))] {
+        mod esp_idf;
+        use self::esp_idf::trace as trace_imp;
+        pub(crate) use self::esp_idf::Frame as FrameImp;
     } else {
         mod noop;
         use self::noop::trace as trace_imp;

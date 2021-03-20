@@ -1,7 +1,7 @@
 #[cfg(feature = "std")]
 use super::{BacktraceFrame, BacktraceSymbol};
 use super::{BytesOrWideString, Frame, SymbolName};
-use core::ffi::c_void;
+use core::{ffi::c_void, ptr};
 use core::fmt;
 
 const HEX_WIDTH: usize = 2 + 2 * core::mem::size_of::<usize>();
@@ -63,6 +63,8 @@ impl<'a, 'b> BacktraceFmt<'a, 'b> {
     pub fn add_context(&mut self) -> fmt::Result {
         #[cfg(target_os = "fuchsia")]
         fuchsia::print_dso_context(self.fmt)?;
+        #[cfg(all(target_os = "none", target_vendor = "espressif"))]
+        write!(self.fmt, "Backtrace:")?; // Keep PlatformIO Serial Monitor happy
         Ok(())
     }
 
@@ -191,6 +193,13 @@ impl BacktraceFrameFmt<'_, '_, '_> {
         // printing addresses in our own format here.
         if cfg!(target_os = "fuchsia") {
             self.print_raw_fuchsia(frame_ip)?;
+        } else if cfg!(all(target_os = "none", target_vendor = "espressif")) {
+            // Ditto for ESP-IDF: ESP-IDF has a special format for printing raw
+            // backtraces which is possible to symbolize later using utilities
+            // like idf_monitor.py and Platformio Serial Monitor.
+            // (These essentially grep for the PC counters and shuffle these
+            // through addr2line.)
+            self.print_raw_esp_idf(frame_ip)?;
         } else {
             self.print_raw_generic(frame_ip, symbol_name, filename, lineno, colno)?;
         }
@@ -290,6 +299,18 @@ impl BacktraceFrameFmt<'_, '_, '_> {
             self.fmt.fmt.write_str("{{{bt:")?;
             write!(self.fmt.fmt, "{}:{:?}", self.fmt.frame_index, frame_ip)?;
             self.fmt.fmt.write_str("}}}\n")?;
+        }
+        Ok(())
+    }
+
+    fn print_raw_esp_idf(&mut self, frame_ip: *mut c_void) -> fmt::Result {
+        // We only care about the first symbol of a frame
+        if self.symbol_index == 0 {
+            // PlatformIO Serial Monitor specifically expects the stacktrace to be a single line
+            // formatted as "Backtrace: <pc1>:<sp1> <pc2>:<sp2> ..."
+            // Therefore, output something (0x0) for sp to keep it happy.
+            // (sp is not really used for symbolization.)
+            write!(self.fmt.fmt, " {:?}:{:?}", frame_ip, ptr::null() as *const c_void)?;
         }
         Ok(())
     }

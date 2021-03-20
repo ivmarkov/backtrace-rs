@@ -37,6 +37,7 @@ cpp_demangle = { default-features = false, version = "0.3.0", optional = true }
 # use these features directly.
 addr2line = { version = "0.14.1", optional = true, default-features = false }
 miniz_oxide = { version = "0.4.0", optional = true, default-features = false }
+
 [dependencies.object]
 version = "0.23"
 optional = true
@@ -45,6 +46,10 @@ features = ['read_core', 'elf', 'macho', 'pe', 'unaligned', 'archive']
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.3", optional = true }
+
+[target.'cfg(all(target_os = "none", target_vendor = "espressif"))'.dependencies]
+#esp-idf-sys = { version = "*", path = "../esp-idf-sys" }
+esp-idf-sys = { version = "*", git = "https://github.com/ivmarkov/esp-idf-sys.git" }
 
 [dev-dependencies]
 dylib-dep = { path = "crates/dylib-dep" }
